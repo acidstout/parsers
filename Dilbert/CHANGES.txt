@@ -1,0 +1,13 @@
+0.2.2
+	Removed option to just download the today's comic strip.
+	Improved checking of existing comics. This is a massive speed gain. Now all missing comics are downloaded, too.
+	
+0.2.1
+	Added option to just download the today's comic strip
+
+0.2
+	Added checking of actual image format and setting a proper file extension (e.g. gif for GIF files, jpeg for JPEG files, ...)
+
+0.1
+	Initial version
+

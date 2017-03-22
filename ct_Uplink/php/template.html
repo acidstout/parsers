@@ -1,0 +1,168 @@
+<!--
+
+	c't Uplink RSS/XML parser HTML template
+	Version 1.1
+ 	
+	Customize to your liking.
+	Requires the  { output } tag to be placed somewhere between the body tags in order to get a list.
+	
+	@author Nils Rekow
+	
+-->
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+		<style type="text/css">
+			* {
+				font-size:8pt;
+			}
+
+			html, body, textarea {
+				width:100%;
+				height:100%;
+				margin:0;
+				padding:0;
+				border:0;
+				background-color:#fff;
+				color:#000;
+			}
+			
+			a {
+				color:#000;
+				font-weight:bold;
+				vertical-align:middle;
+				line-height:14pt;
+			}
+			
+			input[type=text], textarea {
+				background-color: #fafafa;
+			}
+			
+			input[type=text] {
+				border:1px solid #eee;
+				margin:0 0 0 4px;
+				width:80%;
+			}
+			
+			input[type=checkbox] {
+				position:relative;
+				top:2px;
+				cursor:pointer;
+			}
+			
+			label {
+				cursor:pointer;
+			}
+			
+			table {
+				border: 0 none;
+				padding: 0;
+				margin: 0;
+				width:100%;
+			}
+			
+			tr td {
+				width:25%;
+			}
+			
+			textarea {
+				color:#555;
+			}
+			
+			.content {
+				height:95%;
+				overflow:auto;
+			}
+			
+			#left_side ,#right_side {
+				width:50%;
+			}
+			
+			#left_side {
+				position:fixed;
+				top:0;
+				left:0;
+			}
+			
+			#right_side {
+				position:fixed;
+				top:0;
+				right:0;
+			}
+
+			#actions {
+				position:fixed;
+				bottom:0;
+				left:0;
+				width:100%;
+				height:5%;
+				overflow:hidden;
+				text-align:center;
+				background-color: #fff;
+				border-top: 1px solid #ccc;
+				z-index: 100;
+			}
+		</style>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+		<title>c't Uplink RSS-Feed Parser</title>
+	</head>
+	<body>
+		<div id="actions">
+			<table>
+				<tr>
+					<td>Total size: ~<span id="totalSize"></span>GB</td>
+					<td><input type="checkbox" id="show_only_missing_files"/> <label for="show_only_missing_files">Show only missing files</label></td>
+					<td><button id="generateBatch" type="button">Generate Windows download script</button><br/><a href="http://gnuwin32.sourceforge.net/packages/wget.htm" target="_blank">Get Wget for Windows</a></td>
+					<td><button id="generateBash" type="button">Generate Linux bash download script</button><br/><a href="https://www.gnu.org/software/wget/" target="_blank">Wget shoud be part of your Linux distibution.</a></td>
+				</tr>
+			</table>
+		</div>
+		
+		<!-- Begin generated output -->
+		{output}
+		<!-- End generated output -->
+		
+		<script type="text/javascript">
+			$(function() {
+				// Select all on focus, but allow to release selection on second click.
+				$("#wget").on("focus", function() {
+					$(this).one("mouseup", function() {
+			            $(this).select();
+			            return false;
+			        }).select();
+				});
+				
+				// Generate Linux bash script
+				$("#generateBash").click(function() {
+					var wget = $("#wget").val();
+					if (wget.indexOf("@echo off") == -1) {
+						if (wget.indexOf("#!/bin/bash") == -1) {
+							$("#wget").val("#!/bin/bash\n" + wget);
+						} else {
+							$("#wget").val(wget);
+						}
+					} else {
+						wget = wget.split("@echo off\n");
+						$("#wget").val("#!/bin/bash\n" + wget[1]);
+					}
+				});
+
+				// Generate Windows batch script
+				$("#generateBatch").click(function() {
+					var wget = $("#wget").val();
+					if (wget.indexOf("#!/bin/bash") == -1) {
+						if (wget.indexOf("@echo off") == -1) {
+							$("#wget").val("@echo off\n" + wget);
+						} else {
+							$("#wget").val(wget);
+						}
+					} else {
+						wget = wget.split("#!/bin/bash\n");
+						$("#wget").val("@echo off\n" + wget[1]);
+					}
+				});
+			});
+		</script>
+	</body>
+</html>
