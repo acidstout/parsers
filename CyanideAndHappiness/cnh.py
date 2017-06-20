@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 #
 # Cyanide & Happiness Parser
-# Version 0.2
+# Version 0.3
 # @author: nrekow
 #
 # Allows to specify start and end id of comic strips as well as download folder.
@@ -22,6 +22,10 @@ import sys
 import argparse
 import time
 
+if sys.version_info[0] <= 2:
+	print('This script requires Python 3 to run.')
+	sys.exit(0)
+
 # For checking the image type of a file (e.g. gif, jpeg, ...)
 try:
 	import imghdr
@@ -31,17 +35,11 @@ except ImportError:
 
 # For catching URLError while trying to download comic strip
 try:
-	from urllib2 import URLError
+	from urllib.error import URLError
+	import urllib.request as ul
 except ImportError:
 	print('This script requires the urllib2 module to be installed.')
 	sys.exit(0)
-
-# for backwards compatibility
-if sys.version_info[0] > 2:
-	import urllib.request as ul
-else:
-	import urllib as ul
-
 
 def main():
 	# Parse command line arguments
@@ -116,7 +114,8 @@ def download_strips(start_image, end_image, script_path):
 
 	# Read log file and append invalid comic ids to the comics_filename array in order to skip processing of them.
 	try:
-		fh = open(script_path + '/cnh.dat', 'r')
+		print('Using data file ' + os.path.join(script_path, 'cnh.dat'))
+		fh = open(os.path.join(script_path, 'cnh.dat'), 'r')
 		if fh:
 			for line in fh:
 				line = line.replace('\n','')
@@ -124,7 +123,7 @@ def download_strips(start_image, end_image, script_path):
 					comics_filenames.append(line)
 			fh.close()
 	except:
-		print('Data log file not found.')
+		print('Data file not found.')
 
 	# Check defined date range if the file already exists
 	for i in range(int(start_image), int(end_image)+1):
@@ -154,6 +153,7 @@ def download_strips(start_image, end_image, script_path):
 				comic_url = get_true_comic_url(url)
 				
 				if comic_url:
+					# comic_url = comic_url.replace(' ', '%20')
 					print(' from', comic_url, '... ', end='')
 					ul.urlretrieve(comic_url, comic_name)
 					# Sleep a little to avoid hammering the server.
@@ -163,20 +163,26 @@ def download_strips(start_image, end_image, script_path):
 				else:
 					print(' not found!')
 					try:
-						fh = open(script_path + '/cnh.dat', 'a')
+						fh = open(os.path.join(script_path, 'cnh.dat'), 'a')
 						if fh:
 							fh.write(comic_date + '\n')
 							fh.close()
 					except:
-						print('Cannot create data log file!')
-			except URLError, e:
+						print('Cannot create data file!')
+			except URLError as e:
 				print(' failed with error', e.code, 'while trying to download ', url)
 				print('Will try again after 10 seconds ... ', end='')
+				fh = open(os.path.join(script_path, 'cnh.log'), 'a')
+				if fh:
+					fh.write('Failed with ' + str(e.code) + ' while trying to download ' + url + '\n')
+					fh.close()
+
 				time.sleep(10.0)
 				
 				try:
 					comic_url = get_true_comic_url(url)
 					if comic_url:
+						# comic_url = comic_url.replace(' ', '%20')
 						ul.urlretrieve(comic_url, comic_name)
 						# Sleep a little to avoid hammering the server.
 						time.sleep(0.01)
@@ -184,7 +190,7 @@ def download_strips(start_image, end_image, script_path):
 						download_ok = True
 					else:
 						print('not found!')
-				except URLError, e:
+				except URLError as e:
 					print('failed with error', e.code, end='')
 					print('. Skipping.')
 				
@@ -211,7 +217,7 @@ def get_true_comic_url(comic_url, comic_name='comic'):
 	"""
 
 	html = str(ul.urlopen(comic_url).read())
-	comic_strip_pattern = 'http:\/\/files\.explosm\.net\/comics\/[a-zA-Z\d\.\(\)\-\/_ ]+'
+	comic_strip_pattern = 'http:\/\/files\.explosm\.net\/comics\/[a-zA-Z\d\.\(\)\-\/_\,\!\@\s\%]+'
 	result = re.search(comic_strip_pattern, html)
 	if result:
 		return result.group()

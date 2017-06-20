@@ -13,25 +13,23 @@ import glob
 import os
 import re
 import sys
-import urllib
 import argparse
 
-# for backwards compatibility
-if sys.version_info[0] > 2:
+if sys.version_info[0] <= 2:
+	print('This script requires Python 3 to run.')
+	sys.exit(0)
+
+try:
+	from urllib.error import URLError
 	import urllib.request as ul
-else:
-	import urllib as ul
+except ImportError:
+	print('This script requires the urllib module to be installed.')
+	sys.exit(0)
 
 try:
 	import imghdr
 except ImportError:
 	print('This script requires the imghdr module to be installed.')
-	sys.exit(0)
-
-try:
-	from urllib2 import URLError
-except ImportError:
-	print('This script requires the urllib2 module to be installed.')
 	sys.exit(0)
 
 
@@ -123,7 +121,7 @@ def get_comic_image(comic_name, comic_url):
 				ul.urlretrieve('https:' + image_url, comic_name + '.tmp')
 				print('ok')
 				download_ok = True
-			except URLError, e:
+			except URLError as e:
 				print('failed with error ' + e.code + '. Unable to obtain image from:', 'https:' + image_url)
 
 			if download_ok:

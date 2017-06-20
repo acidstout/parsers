@@ -14,6 +14,10 @@ import sys
 import time
 import argparse
 
+if sys.version_info[0] <= 2:
+	print('This script requires Python 3 to run.')
+	sys.exit(0)
+	
 # nrekow, 2017-02-10:
 try:
 	from dateutil import rrule, parser
@@ -30,17 +34,11 @@ except ImportError:
 
 # nrekow, 2017-02-10:	
 try:
-	from urllib2 import URLError
+	from urllib.error import URLError
+	import urllib.request as ul
 except ImportError:
 	print('This script requires the urllib2 module to be installed.')
 	sys.exit(0)
-
-# for backwards compatibility
-if sys.version_info[0] > 2:
-	import urllib.request as ul
-else:
-	import urllib as ul
-
 
 def main():
 	args = parse_input_arguments()
@@ -148,7 +146,7 @@ def download_strips(start_date, end_date):
 				time.sleep(0.01)
 				print('ok!')
 				download_ok = True
-			except URLError, e:
+			except URLError as e:
 				print('failed with error', e.code, 'while trying to download ', url)
 				print('Will try again after 10 seconds ... ', end='')
 				time.sleep(10.0)
@@ -159,7 +157,7 @@ def download_strips(start_date, end_date):
 					time.sleep(0.01)
 					print('ok!')
 					download_ok = True
-				except URLError, e:
+				except URLError as e:
 					print('failed with error', e.code, end='')
 					print('. Skipping.')
 				
