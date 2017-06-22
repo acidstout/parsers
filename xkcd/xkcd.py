@@ -36,6 +36,8 @@ except ImportError:
 def main():
 	args = parse_input_arguments()
 
+	script_path = os.path.abspath(os.path.dirname(__file__))
+
 	# If a dump folder has been defiled, create it (if does not already exists)
 	# and move to it
 	try:
@@ -47,7 +49,7 @@ def main():
 	os.chdir(args.output)
 
 	try:
-		get_xkcd_strips()
+		get_xkcd_strips(script_path)
 	except (KeyboardInterrupt, SystemExit):
 		print('User requested program exit.')
 		sys.exit(1)
@@ -63,12 +65,12 @@ def parse_input_arguments():
 	args = argp.parse_args()
 	
 	# Only check for today's comic strip? Then use now as start and end date.
-	print('Checking if new content is available ...')
+	print('Checking if new XKCD content is available ...')
 
 	return args
 
 
-def get_xkcd_strips():
+def get_xkcd_strips(script_path):
 	"""
 	Connect to the XKCD index page and return a dict with all the available
 	comic strips and its URL.
@@ -83,10 +85,10 @@ def get_xkcd_strips():
 	xkcd_strips_url = re.findall(xkcd_strip_pattern, xkdc_index)
 
 	for xkcd_strip in xkcd_strips_url:
-		get_comic_image('_'.join(xkcd_strip), 'https://xkcd.com/' + xkcd_strip[0])
+		get_comic_image(script_path, '_'.join(xkcd_strip), 'https://xkcd.com/' + xkcd_strip[0])
 
 
-def get_comic_image(comic_name, comic_url):
+def get_comic_image(script_path, comic_name, comic_url):
 	# Replace slashes in comic name by underscores
 	comic_name = comic_name.replace('/','_')
 	comic_name = comic_name.replace('\\','_')
@@ -122,7 +124,13 @@ def get_comic_image(comic_name, comic_url):
 				print('ok')
 				download_ok = True
 			except URLError as e:
-				print('failed with error ' + e.code + '. Unable to obtain image from:', 'https:' + image_url)
+				errMsg = 'failed with error ' + e.code + '. Unable to obtain image from: ' + 'https:' + image_url
+				print(errMsg)
+				fh = open(os.path.join(script_path, 'xkcd.log'), 'a')
+				if fh:
+					fh.write(errMsg + '\n')
+					fh.close()
+
 
 			if download_ok:
 				# Check filetype and rename extension
@@ -132,7 +140,12 @@ def get_comic_image(comic_name, comic_url):
 					try:
 						os.rename(comic_name + '.tmp', comic_name + '.' + extension)
 					except OSError:
-						print('Cannot change file extension of', comic_name + '.tmp')
+						errMsg = 'Cannot change file extension of' + comic_name + '.tmp'
+						print (errMsg)
+						fh = open(os.path.join(script_path, 'xkcd.log'), 'a')
+						if fh:
+							fh.write(errMsg + '\n')
+							fh.close()
 		else:
 			# Images 1608 and 1663 cannot be downloaded, because those are interactive comic strips.
 			if comic_url.endswith('1608') or comic_url.endswith('1663'):

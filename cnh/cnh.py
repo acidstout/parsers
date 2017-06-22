@@ -60,7 +60,7 @@ def main():
 	
 	# Download comic strips
 	try:
-		download_strips(args.start_image, args.end_image, script_path)
+		download_strips(script_path, args.start_image, args.end_image)
 	except (KeyboardInterrupt, SystemExit):
 		print('User requested program exit.')
 		sys.exit(1)
@@ -92,12 +92,12 @@ def parse_input_arguments():
 		
 	print('Latest comic id:', args.end_image)
 	# Only check for today's comic strip? Then use now as start and end date.
-	print('Checking if new content is available ...')
+	print('Checking if new Cyanide & Happiness content is available ...')
 
 	return args
 
 
-def download_strips(start_image, end_image, script_path):
+def download_strips(script_path, start_image, end_image):
 	# Gets a list of already downloaded comics
 	comics = glob.glob('./*')
 	
@@ -170,12 +170,8 @@ def download_strips(start_image, end_image, script_path):
 					except:
 						print('Cannot create data file!')
 			except URLError as e:
-				print(' failed with error', e.code, 'while trying to download ', url)
+				print(' failed with error' + str(e.code) + 'while trying to download ' + url)
 				print('Will try again after 10 seconds ... ', end='')
-				fh = open(os.path.join(script_path, 'cnh.log'), 'a')
-				if fh:
-					fh.write('Failed with ' + str(e.code) + ' while trying to download ' + url + '\n')
-					fh.close()
 
 				time.sleep(10.0)
 				
@@ -191,7 +187,13 @@ def download_strips(start_image, end_image, script_path):
 					else:
 						print('not found!')
 				except URLError as e:
-					print('failed with error', e.code, end='')
+					errMsg = 'failed with error' + str(e.code) 
+					fh = open(os.path.join(script_path, 'cnh.log'), 'a')
+					if fh:
+						fh.write(errMsg + ' while trying to download ' + comic_url + '\n')
+						fh.close()
+
+					print(errMsg, end='')
 					print('. Skipping.')
 				
 			if download_ok:
