@@ -52,6 +52,7 @@ except ImportError:
 	print('This script requires the urllib module to be installed.')
 	sys.exit(0)
 
+
 def main():
 	args = parse_input_arguments()
 
@@ -73,6 +74,8 @@ def main():
 	except (KeyboardInterrupt, SystemExit):
 		print('User requested program exit.')
 		sys.exit(1)
+
+	print('\n')
 
 
 def parse_input_arguments():
@@ -203,6 +206,7 @@ def download_strips(script_path, start_date, end_date):
 	else:
 		print('No new content available, yet.')
 
+
 def get_true_comic_url(script_path, comic_url, comic_name='comic'):
 	"""
 	Get the true comic strip url from http://dilbert.com/strip/<date>
@@ -228,6 +232,7 @@ def get_true_comic_url(script_path, comic_url, comic_name='comic'):
 
 		print(errMsg, end='')
 		print('. Skipping.')
+
 
 if __name__ == '__main__':
 	main()

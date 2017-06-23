@@ -41,6 +41,7 @@ except ImportError:
 	print('This script requires the urllib2 module to be installed.')
 	sys.exit(0)
 
+
 def main():
 	# Parse command line arguments
 	args = parse_input_arguments()
@@ -64,6 +65,8 @@ def main():
 	except (KeyboardInterrupt, SystemExit):
 		print('User requested program exit.')
 		sys.exit(1)
+	
+	print('\n')
 
 
 def parse_input_arguments():
@@ -208,6 +211,7 @@ def download_strips(script_path, start_image, end_image):
 	else:
 		print('No new content available, yet.')
 
+
 def get_true_comic_url(comic_url, comic_name='comic'):
 	"""
 	Get the true comic strip url from http://dilbert.com/strip/<date>
@@ -226,6 +230,7 @@ def get_true_comic_url(comic_url, comic_name='comic'):
 	else:
 		return ''
 
+
 def get_latest_comic_id():
 	"""
 	Get the id of the latest comic strip from http://explosm.net/comics/latest
@@ -241,6 +246,7 @@ def get_latest_comic_id():
 		return result
 	else:
 		return '0'
-	
+
+
 if __name__ == '__main__':
 	main()

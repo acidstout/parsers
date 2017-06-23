@@ -53,6 +53,8 @@ def main():
 	except (KeyboardInterrupt, SystemExit):
 		print('User requested program exit.')
 		sys.exit(1)
+	
+	print('\n')
 
 
 def parse_input_arguments():
@@ -152,5 +154,7 @@ def get_comic_image(script_path, comic_name, comic_url):
 				print('interactive comic-strips are not supported.')
 			else:
 				print('no comic found.')
+
+
 if __name__ == '__main__':
 	main()
