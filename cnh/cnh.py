@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 #
 # Cyanide & Happiness Parser
-# Version 0.3
+# Version 0.3.1
 # @author: nrekow
 #
 # Allows to specify start and end id of comic strips as well as download folder.
@@ -152,10 +152,12 @@ def download_strips(script_path, start_image, end_image):
 			print('Getting comic', comic_date, end='')
 
 			download_ok = False
+			comic_url = ''
+			
 			try:
 				comic_url = get_true_comic_url(url)
 				
-				if comic_url:
+				if comic_url != '':
 					# comic_url = comic_url.replace(' ', '%20')
 					print(' from', comic_url, '... ', end='')
 					ul.urlretrieve(comic_url, comic_name)
@@ -173,31 +175,38 @@ def download_strips(script_path, start_image, end_image):
 					except:
 						print('Cannot create data file!')
 			except URLError as e:
-				print(' failed with error' + str(e.code) + 'while trying to download ' + url)
+				errMsg = ' failed with error ' + str(e.code) + ' while trying to download ' + url
+				fh = open(os.path.join(script_path, 'cnh.log'), 'a')
+				if fh:
+					fh.write(errMsg + '\n')
+					fh.close()
+				
+				print(errMsg)
 				print('Will try again after 10 seconds ... ', end='')
 
 				time.sleep(10.0)
 				
-				try:
-					comic_url = get_true_comic_url(url)
-					if comic_url:
-						# comic_url = comic_url.replace(' ', '%20')
-						ul.urlretrieve(comic_url, comic_name)
-						# Sleep a little to avoid hammering the server.
-						time.sleep(0.01)
-						print('ok!')
-						download_ok = True
-					else:
-						print('not found!')
-				except URLError as e:
-					errMsg = 'failed with error' + str(e.code) 
-					fh = open(os.path.join(script_path, 'cnh.log'), 'a')
-					if fh:
-						fh.write(errMsg + ' while trying to download ' + comic_url + '\n')
-						fh.close()
+				if e.code != 404:
+					try:
+						comic_url = get_true_comic_url(url)
+						if comic_url != '':
+							# comic_url = comic_url.replace(' ', '%20')
+							ul.urlretrieve(comic_url, comic_name)
+							# Sleep a little to avoid hammering the server.
+							time.sleep(0.01)
+							print('ok!')
+							download_ok = True
+						else:
+							print('not found!')
+					except URLError as e:
+						errMsg = 'failed with error ' + str(e.code) 
+						fh = open(os.path.join(script_path, 'cnh.log'), 'a')
+						if fh:
+							fh.write(errMsg + ' while trying to download ' + url + '\n')
+							fh.close()
 
-					print(errMsg, end='')
-					print('. Skipping.')
+						print(errMsg, end='')
+						print('. Skipping.')
 				
 			if download_ok:
 				# nrekow, 2017-02-02: Check image type and set proper file extension.

@@ -38,7 +38,7 @@ def main():
 
 	script_path = os.path.abspath(os.path.dirname(__file__))
 
-	# If a dump folder has been defiled, create it (if does not already exists)
+	# If a dump folder has been defined, create it (if does not already exists)
 	# and move to it
 	try:
 		if args.output != '.' and not(os.path.isdir(args.output)):
