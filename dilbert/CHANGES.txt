@@ -1,3 +1,9 @@
+0.2.3
+	Upgraded code to support Python 3.
+	Removed Python 2 support.
+	Added logging to file on error.
+	Updated documentation
+	
 0.2.2
 	Removed option to just download the today's comic strip.
 	Improved checking of existing comics. This is a massive speed gain. Now all missing comics are downloaded, too.

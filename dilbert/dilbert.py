@@ -5,6 +5,14 @@ See README.md for details.
 """
 
 from __future__ import print_function
+from http.client import RemoteDisconnected
+from urllib.error import HTTPError
+
+# Set duration in seconds to wait after each download to avoid hammering the server
+wait = 2
+
+#####################################################################################
+
 
 import datetime
 import os
@@ -13,7 +21,13 @@ import re
 import sys
 import time
 import argparse
+import codecs
 
+
+if sys.version_info[0] <= 2:
+	print('This script requires Python 3 to run.')
+	sys.exit(0)
+	
 # nrekow, 2017-02-10:
 try:
 	from dateutil import rrule, parser
@@ -30,16 +44,11 @@ except ImportError:
 
 # nrekow, 2017-02-10:	
 try:
-	from urllib2 import URLError
-except ImportError:
-	print('This script requires the urllib2 module to be installed.')
-	sys.exit(0)
-
-# for backwards compatibility
-if sys.version_info[0] > 2:
+	from urllib.error import URLError
 	import urllib.request as ul
-else:
-	import urllib as ul
+except ImportError:
+	print('This script requires the urllib module to be installed.')
+	sys.exit(0)
 
 
 def main():
@@ -54,13 +63,17 @@ def main():
 	except OSError:
 		args.output = '.'
 	
+	script_path = os.path.abspath(os.path.dirname(__file__))
+	
 	os.chdir(args.output)
 
 	try:
-		download_strips(args.start_date, args.end_date)
+		download_strips(script_path, args.start_date, args.end_date)
 	except (KeyboardInterrupt, SystemExit):
 		print('User requested program exit.')
 		sys.exit(1)
+
+	print('\n')
 
 
 def parse_input_arguments():
@@ -87,7 +100,7 @@ def parse_input_arguments():
 	args.start_date = parser.parse(args.start_date)
 	
 	# Only check for today's comic strip? Then use now as start and end date.
-	print('Checking if new content is available ...')
+	print('Checking if new Dilbert content is available ...')
 
 	return args
 
@@ -100,7 +113,7 @@ def is_date(string):
         return False
 
 
-def download_strips(start_date, end_date):
+def download_strips(script_path, start_date, end_date):
 	# Gets a list of already downloaded comics
 	comics = glob.glob('./*')
 	
@@ -132,7 +145,7 @@ def download_strips(start_date, end_date):
 		for comic_date in missing_comics:
 			# Build URL to comic strip page
 			url  = 'http://dilbert.com/strip/' + comic_date
-			
+
 			# Save the file as tmp-file, because we don't know the image type, yet.
 			comic_name = comic_date + '.tmp'
 		
@@ -143,39 +156,56 @@ def download_strips(start_date, end_date):
 
 			download_ok = False
 			try:
-				ul.urlretrieve(get_true_comic_url(url), comic_name)
-				# Sleep a little to avoid hammering the server.
-				time.sleep(0.01)
-				print('ok!')
-				download_ok = True
-			except URLError, e:
-				print('failed with error', e.code, 'while trying to download ', url)
+				try:
+					ul.urlretrieve(get_true_comic_url(script_path, url), comic_name)
+					# Sleep a little to avoid hammering the server.
+					time.sleep(wait)
+					print('ok!')
+					download_ok = True
+				except RemoteDisconnected as r:
+					print('Remote end closed connection without response.')
+			except HTTPError as e:
+				print('failed with error' + str(e.code))
+			except URLError as e:
+				print('failed with error', e.args, 'while trying to download ', url)
 				print('Will try again after 10 seconds ... ', end='')
 				time.sleep(10.0)
 				
 				try:
-					ul.urlretrieve(get_true_comic_url(url), comic_name)
+					ul.urlretrieve(get_true_comic_url(script_path, url), comic_name)
 					# Sleep a little to avoid hammering the server.
-					time.sleep(0.01)
+					time.sleep(wait)
 					print('ok!')
 					download_ok = True
-				except URLError, e:
-					print('failed with error', e.code, end='')
+				except HTTPError as e:
+					errMsg = 'failed with error' + str(e.code)
+				except URLError as e:
+					errMsg = 'failed with error' + str(e.args)
+					fh = open(os.path.join(script_path, 'dilbert.log'), 'a')
+					if fh:
+						fh.write(errMsg + ' while trying to download ' + url + '\n')
+						fh.close()
+						
+					print(errMsg, end='')
 					print('. Skipping.')
-				
+
 			if download_ok:
 				# nrekow, 2017-02-02: Check image type and set proper file extension.
-				extension = imghdr.what(comic_name)
-					
-				if extension is not None:
-					try:
-						os.rename(comic_name, comic_name[:-3] + extension)
-					except OSError:
-						print('Cannot change file extension of', comic_name)
+				try:
+					extension = imghdr.what(comic_name)
+					if extension is not None:
+						try:
+							os.rename(comic_name, comic_name[:-3] + extension)
+						except OSError:
+							print('Cannot change file extension of', comic_name)
+
+				except FileNotFoundError:
+					print('Cannot check file type of non-existent files.')
 	else:
 		print('No new content available, yet.')
 
-def get_true_comic_url(comic_url, comic_name='comic'):
+
+def get_true_comic_url(script_path, comic_url, comic_name='comic'):
 	"""
 	Get the true comic strip url from http://dilbert.com/strip/<date>
 
@@ -185,9 +215,21 @@ def get_true_comic_url(comic_url, comic_name='comic'):
 	the URL where the original image lives.
 	"""
 
-	html = str(ul.urlopen(comic_url).read())
-	comic_strip_pattern = 'http://assets\.amuniversal\.com/[a-zA-Z\d]+'
-	return re.search(comic_strip_pattern, html).group()
+	try:
+		html = str(ul.urlopen(comic_url).read())
+		comic_strip_pattern = 'http://assets\.amuniversal\.com/[a-zA-Z\d]+'
+		return re.search(comic_strip_pattern, html).group()
+	except HTTPError as e:
+		errMsg = 'failed with error' + str(e.code)
+	except URLError as e:
+		errMsg = 'Failed with error' + str(e.args) + 'while trying to get true comic url from ' + comic_url
+		fh = open(os.path.join(script_path, 'dilbert.log'), 'a')
+		if fh:
+			fh.write(errMsg + '\n')
+			fh.close()
+
+		print(errMsg, end='')
+		print('. Skipping.')
 
 
 if __name__ == '__main__':

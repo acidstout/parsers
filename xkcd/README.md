@@ -15,9 +15,9 @@ None so far. If you find one, create an issue for it.
 
 Requirements
 =======================
-This script requires at least Python 2 to run. Also make sure to have the following modules installed:
+This script requires at least Python 3 to run. Also make sure to have the following modules installed:
 - imghdr
-- urllib2
+- urllib
 besides the system's default modules.
 
 
