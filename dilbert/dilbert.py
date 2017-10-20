@@ -21,8 +21,6 @@ import re
 import sys
 import time
 import argparse
-
-import requests
 import codecs
 
 
