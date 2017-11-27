@@ -10,3 +10,4 @@ cd $SCRIPTPATH
 for i in cnh dilbert xkcd; do
 	./$i/$i.py -o $DESTINATION/$i
 done
+./maloney/maloney.sh
