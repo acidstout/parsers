@@ -1,10 +1,18 @@
 #!/usr/bin/env bash
 #
 # Maloney Episodes Downloader
-# Version 1.0
+# Version 1.1
 #
 # Desription
 #	Download latest episodes of SRF's "Die haarstäubenden Fälle des Philip Maloney"
+#
+# Requirements
+#	awk
+#	curl
+#	grep
+#	sed
+#	wget
+#	xmllint
 #
 # Setup dependencies
 #	sudo apt install gawk curl grep sed wget libxml2-utils
@@ -12,10 +20,11 @@
 # Usage
 #	./maloney.sh
 #
+#
 
 # Set this to false to generate an XML items list instead of downloading episodes.
 download_flag=true
-download_folder="~/Downloads/parsers/maloney"
+download_folder="/mnt/d/Downloads/maloney"
 
 # Downloads the current item if it's not available in the current folder.
 function download_item() {
@@ -26,7 +35,7 @@ function download_item() {
 	description="$5"
 
 	if [ ! -d "$download_folder" ]; then
-		mkdir -p "$download_folder"
+		mkdir "$download_folder"
 	fi
 	
 	if [ ! -f "$download_folder/$pub_date $title.mp3" ]; then
@@ -119,28 +128,32 @@ while $has_episodes; do
 		# Trims the title.
 		title=$(echo -n $title | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
 
-		>&2 echo "Processing '$title'..."
+		if [ ! -f "$download_folder/$pub_date $title.mp3" ]; then
+			>&2 echo -n "Processing \"$title\" ... "
+			# Retrieves the audio download link (the https one).
+			audio_source=$(curl --silent --compressed \
+				"https://il.srgssr.ch/integrationlayer/1.0/ue/srf/audio/play/$urn" | \
+				grep -Po "https.*\.mp3" | \
+				head -n1)
 
-		# Retrieves the audio download link (the https one).
-		audio_source=$(curl --silent --compressed \
-			"https://il.srgssr.ch/integrationlayer/1.0/ue/srf/audio/play/$urn" | \
-			grep -Po "https.*\.mp3" | \
-			head -n1)
+			# Fetches the audio filesize.
+			filesize_B=$(curl --silent --head "$audio_source" | awk '/Content-Length/ { print substr($2, 1, length($2)-1) }')
 
-		# Fetches the audio filesize.
-		filesize_B=$(curl --silent --head "$audio_source" | awk '/Content-Length/ { print substr($2, 1, length($2)-1) }')
-
-		if [ $download_flag ]; then
-			item=$(download_item "$title" "$audio_source" "$filesize_B" "$pub_date" "$description")
-		else
-			item=$(print_item "$title" "$audio_source" "$filesize_B" "$pub_date" "$description")
+			if [ $download_flag ]; then
+				>&2 echo -n "downloading ... "
+				item=$(download_item "$title" "$audio_source" "$filesize_B" "$pub_date" "$description")
+				>&2 echo "ok."
+			else
+				>&2 echo "added to feed."
+				item=$(print_item "$title" "$audio_source" "$filesize_B" "$pub_date" "$description")
+			fi
+			
+			items=$(echo -e "$items\n$item")
 		fi
 		
-		items=$(echo -e "$items\n$item")
-
 		# Removes the last progress output.
-		>&2 tput cuu1
-		>&2 tput el
+		# >&2 tput cuu1
+		# >&2 tput el
 	done
 
 	offset=$(( $offset + $num_episodes ))
