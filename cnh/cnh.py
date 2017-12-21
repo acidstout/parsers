@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 #
 # Cyanide & Happiness Parser
-# Version 0.3.1
+# Version 0.3.2
 # @author: nrekow
 #
 # Allows to specify start and end id of comic strips as well as download folder.
@@ -91,13 +91,24 @@ def parse_input_arguments():
 	if int(args.end_image) == 0:
 		args.end_image = get_latest_comic_id()
 		if int(args.end_image) == 0:
-			args.end_image = '5000' # Fallback to 5000. In the future this will not be enough. Maybe increase or optimize.
+			# args.end_image = '5000' # Fallback to 5000. In the future this will not be enough. Maybe increase or optimize.
+			print('Could not find latest comic id. Aborted.')
+			sys.exit(1)
 		
 	print('Latest comic id:', args.end_image)
 	# Only check for today's comic strip? Then use now as start and end date.
 	print('Checking if new Cyanide & Happiness content is available ...')
 
 	return args
+
+def update_data_file(script_path, comic_date):
+	try:
+		fh = open(os.path.join(script_path, 'cnh.dat'), 'a')
+		if fh:
+			fh.write(comic_date + '\n')
+			fh.close()
+	except:
+		print('Cannot create/write to data file!')
 
 
 def download_strips(script_path, start_image, end_image):
@@ -167,13 +178,7 @@ def download_strips(script_path, start_image, end_image):
 					download_ok = True
 				else:
 					print(' not found!')
-					try:
-						fh = open(os.path.join(script_path, 'cnh.dat'), 'a')
-						if fh:
-							fh.write(comic_date + '\n')
-							fh.close()
-					except:
-						print('Cannot create data file!')
+					update_data_file(script_path, comic_date)
 			except URLError as e:
 				errMsg = ' failed with error ' + str(e.code) + ' while trying to download ' + url
 				fh = open(os.path.join(script_path, 'cnh.log'), 'a')
@@ -182,11 +187,11 @@ def download_strips(script_path, start_image, end_image):
 					fh.close()
 				
 				print(errMsg)
-				print('Will try again after 10 seconds ... ', end='')
-
-				time.sleep(10.0)
 				
 				if e.code != 404:
+					print('Will try again after 10 seconds ... ', end='')
+					time.sleep(10.0)
+
 					try:
 						comic_url = get_true_comic_url(url)
 						if comic_url != '':
@@ -198,6 +203,7 @@ def download_strips(script_path, start_image, end_image):
 							download_ok = True
 						else:
 							print('not found!')
+							update_data_file(script_path, comic_date)
 					except URLError as e:
 						errMsg = 'failed with error ' + str(e.code) 
 						fh = open(os.path.join(script_path, 'cnh.log'), 'a')
@@ -207,7 +213,9 @@ def download_strips(script_path, start_image, end_image):
 
 						print(errMsg, end='')
 						print('. Skipping.')
-				
+				else:
+					update_data_file(script_path, comic_date)
+					
 			if download_ok:
 				# nrekow, 2017-02-02: Check image type and set proper file extension.
 				extension = imghdr.what(comic_name)

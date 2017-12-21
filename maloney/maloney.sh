@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Maloney Episodes Downloader
-# Version 1.1
+# Version 1.2
 #
 # Desription
 #	Download latest episodes of SRF's "Die haarstäubenden Fälle des Philip Maloney"
@@ -18,13 +18,20 @@
 #	sudo apt install gawk curl grep sed wget libxml2-utils
 #	
 # Usage
-#	./maloney.sh
+#	./maloney.sh [destination]
 #
 #
 
 # Set this to false to generate an XML items list instead of downloading episodes.
-download_flag=true
+download_flag="true"
 download_folder="/mnt/d/Downloads/maloney"
+
+if [[ ! -z $1 && -d $1 ]]; then
+	download_folder="$1";
+fi
+
+echo "Checking for new Philip Maloney episodes ..."
+# echo "Using $download_folder"
 
 # Downloads the current item if it's not available in the current folder.
 function download_item() {
@@ -89,11 +96,12 @@ EOF
 # Initialize variables.
 items=""
 offset=0
-has_episodes=true
+has_episodes="true"
+has_new_episodes="false"
 
 
 # Main loop.
-while $has_episodes; do
+while [ "$has_episodes" = "true" ]; do
 	index_url="https://www.srf.ch/sendungen/maloney/layout/set/ajax/Sendungen/maloney/sendungen/(offset)/$offset"
 	index=$(curl --silent --compressed "$index_url")
 
@@ -121,7 +129,7 @@ while $has_episodes; do
 
 		if [[ "$urn" == "" ]]; then
 			# This (and all following) episode is no longer available.
-			has_episodes=false
+			has_episodes="false"
 			break
 		fi
 
@@ -129,6 +137,8 @@ while $has_episodes; do
 		title=$(echo -n $title | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
 
 		if [ ! -f "$download_folder/$pub_date $title.mp3" ]; then
+			has_new_episodes="true"
+
 			>&2 echo -n "Processing \"$title\" ... "
 			# Retrieves the audio download link (the https one).
 			audio_source=$(curl --silent --compressed \
@@ -139,7 +149,7 @@ while $has_episodes; do
 			# Fetches the audio filesize.
 			filesize_B=$(curl --silent --head "$audio_source" | awk '/Content-Length/ { print substr($2, 1, length($2)-1) }')
 
-			if [ $download_flag ]; then
+			if [ "$download_flag" = "true" ]; then
 				>&2 echo -n "downloading ... "
 				item=$(download_item "$title" "$audio_source" "$filesize_B" "$pub_date" "$description")
 				>&2 echo "ok."
@@ -161,6 +171,10 @@ while $has_episodes; do
 done
 
 # Output generated XML/RSS feed.
-if [ ! $download_flag ]; then
+if [ ! "$download_flag" = "true" ]; then
 	print_podcast_rss "$items"
+fi
+
+if [ ! "$has_new_episodes" = "true" ]; then
+	echo "No new content available, yet."
 fi
