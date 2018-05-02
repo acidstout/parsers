@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Maloney Episodes Downloader
-# Version 1.2
+# Version 1.2.1
 #
 # Desription
 #	Download latest episodes of SRF's "Die haarstäubenden Fälle des Philip Maloney"
@@ -117,6 +117,12 @@ while [ "$has_episodes" = "true" ]; do
 	episodes_selector="//li[contains(@class, 'episode')]"
 	num_episodes=$(xmllint "count($episodes_selector)")
 
+	echo "Found $num_episodes episodes."
+	if [ $num_episodes == 0 ]; then
+		has_episodes="false"
+		break
+	fi
+	
 	for i in $(seq 1 $num_episodes); do
 		episode_selector="($episodes_selector)[$i]"
 
