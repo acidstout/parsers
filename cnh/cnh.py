@@ -38,7 +38,14 @@ try:
 	from urllib.error import URLError
 	import urllib.request as ul
 except ImportError:
-	print('This script requires the urllib2 module to be installed.')
+	print('This script requires the urllib module to be installed.')
+	sys.exit(0)
+
+# For actually downloading the comic-strip. urllib fails with HTTP error 505 since about 2018-06-19.
+try:
+	import requests
+except ImportError:
+	print('This script requires the requests module to be installed.')
 	sys.exit(0)
 
 
@@ -171,7 +178,14 @@ def download_strips(script_path, start_image, end_image):
 				if comic_url != '':
 					# comic_url = comic_url.replace(' ', '%20')
 					print(' from', comic_url, '... ', end='')
-					ul.urlretrieve(comic_url, comic_name)
+					
+					# Use "response" instead of "urllib", because the latter fails with HTTP error 505, when trying to download a comic-strip.
+					#ul.urlretrieve(comic_url, comic_name)
+					response = requests.get(comic_url, timeout=60, verify=False)
+					f = open(comic_name, 'wb')
+					f.write(response.content)
+					f.close()
+					
 					# Sleep a little to avoid hammering the server.
 					time.sleep(0.01)
 					print('ok!')
@@ -196,7 +210,12 @@ def download_strips(script_path, start_image, end_image):
 						comic_url = get_true_comic_url(url)
 						if comic_url != '':
 							# comic_url = comic_url.replace(' ', '%20')
-							ul.urlretrieve(comic_url, comic_name)
+							#ul.urlretrieve(comic_url, comic_name)
+							response = requests.get(comic_url, timeout=60, verify=False)
+							f = open(comic_name, 'wb')
+							f.write(response.content)
+							f.close()
+
 							# Sleep a little to avoid hammering the server.
 							time.sleep(0.01)
 							print('ok!')

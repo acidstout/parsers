@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Maloney Episodes Downloader
-# Version 1.2.1
+# Version 1.2.2 Beta
 #
 # Desription
 #	Download latest episodes of SRF's "Die haarstäubenden Fälle des Philip Maloney"
@@ -98,10 +98,11 @@ items=""
 offset=0
 has_episodes="true"
 has_new_episodes="false"
+num_episodes_shown="false"
 
 
 # Main loop.
-while [ "$has_episodes" = "true" ]; do
+# while [ $has_episodes == "true" ]; do
 	index_url="https://www.srf.ch/sendungen/maloney/layout/set/ajax/Sendungen/maloney/sendungen/(offset)/$offset"
 	index=$(curl --silent --compressed "$index_url")
 
@@ -117,13 +118,18 @@ while [ "$has_episodes" = "true" ]; do
 	episodes_selector="//li[contains(@class, 'episode')]"
 	num_episodes=$(xmllint "count($episodes_selector)")
 
-	echo "Found $num_episodes episodes."
 	if [ $num_episodes == 0 ]; then
 		has_episodes="false"
 		break
 	fi
+
+	if [ $num_episodes_shown == "false" ]; then
+		echo -n "Checking latest $num_episodes episodes ..."
+		num_episodes_shown="true"
+	fi
 	
 	for i in $(seq 1 $num_episodes); do
+		>&2 echo -n "."
 		episode_selector="($episodes_selector)[$i]"
 
 		# Fetches the info for this episode.
@@ -145,6 +151,7 @@ while [ "$has_episodes" = "true" ]; do
 		if [ ! -f "$download_folder/$pub_date $title.mp3" ]; then
 			has_new_episodes="true"
 
+			>&2 echo " found."
 			>&2 echo -n "Processing \"$title\" ... "
 			# Retrieves the audio download link (the https one).
 			audio_source=$(curl --silent --compressed \
@@ -163,7 +170,8 @@ while [ "$has_episodes" = "true" ]; do
 				>&2 echo "added to feed."
 				item=$(print_item "$title" "$audio_source" "$filesize_B" "$pub_date" "$description")
 			fi
-			
+
+			>&2 echo -n "Checking for another episode ..."
 			items=$(echo -e "$items\n$item")
 		fi
 		
@@ -172,15 +180,17 @@ while [ "$has_episodes" = "true" ]; do
 		# >&2 tput el
 	done
 
-	offset=$(( $offset + $num_episodes ))
+	echo " done."
+
+	# offset=$(( $offset + $num_episodes ))
 	# >&2 echo $offset
-done
+# done
 
 # Output generated XML/RSS feed.
-if [ ! "$download_flag" = "true" ]; then
+if [ $download_flag != "true" ]; then
 	print_podcast_rss "$items"
 fi
 
-if [ ! "$has_new_episodes" = "true" ]; then
+if [ $has_new_episodes != "true" ]; then
 	echo "No new content available, yet."
 fi
