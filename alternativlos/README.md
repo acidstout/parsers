@@ -3,6 +3,11 @@ Alternativlos Parser
 Simple script to download the Alternativlos podcasts from https://alternativlos.org. It downloads all podcasts to the current folder unless they already exist.
 
 
+Command line parameters
+=======================
+-o, --output	Folder where to put the downloaded podcast. Defaults to current folder.
+
+
 Known issues
 =======================
 None so far. If you find one, create an issue for it.

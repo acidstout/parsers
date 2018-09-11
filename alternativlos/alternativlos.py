@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 from pathlib import Path
 import os
 import sys
+import argparse
 
 if sys.version_info[0] <= 2:
 	print('This script requires Python 3 to run.')
@@ -28,8 +29,33 @@ except ImportError:
 	print('This script requires the urllib module to be installed.')
 	sys.exit(0)
 
+
+def parse_input_arguments():
+	argp = argparse.ArgumentParser(description = 'Alternativlos Parser.')
+	argp.add_argument('-o', '--output',
+		dest = 'output',
+		help = 'Podcasts dump folder',
+		default = '.')
+
+	args = argp.parse_args()
+	
+	print('Checking if new Alternativlos podcasts are available ...')
+
+	return args
+
+
 def main():
+	args = parse_input_arguments()
+	try:
+		if args.output != '.' and not(os.path.isdir(args.output)):
+			os.makedirs(args.output)
+	except OSError:
+		args.output = '.'
+	
 	script_path = os.path.abspath(os.path.dirname(__file__))
+	
+	os.chdir(args.output)
+
 	url = 'https://alternativlos.org/alternativlos.rss'
 	html = str(ul.urlopen(url).read(), 'utf-8')
 	
@@ -38,7 +64,7 @@ def main():
 
 	for s in itemlist:
 		destination_name = urlparse(s.attributes['url'].value)
-		destination_name = os.path.join(script_path, os.path.basename(destination_name.path))
+		destination_name = os.path.join(args.output, os.path.basename(destination_name.path))
 		destination_path = Path(destination_name) 
 		print('Downloading', s.attributes['url'].value, '... ', end='')
 
