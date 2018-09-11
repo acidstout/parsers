@@ -7,7 +7,7 @@
 DESTINATION=~/Downloads/parsers
 SCRIPTPATH=$(cd $(dirname $0); pwd -P)
 cd $SCRIPTPATH
-for i in cnh dilbert xkcd; do
+for i in alternativlos cnh dilbert xkcd; do
 	./$i/$i.py -o $DESTINATION/$i
 done
 ./maloney/maloney.sh

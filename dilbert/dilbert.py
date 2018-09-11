@@ -210,7 +210,7 @@ def get_true_comic_url(script_path, comic_url, comic_name='comic'):
 	Get the true comic strip url from http://dilbert.com/strip/<date>
 
 	It looks like Scott Adams has protected himself against pointy haired
-	pirates by hiding his comic strips within the assets.amuniversal domain.
+	pirates by hiding his comic strips within the assets.amuniversal.com domain.
 	This function digs into the comic strip web-page, finds (and returns)
 	the URL where the original image lives.
 	"""
