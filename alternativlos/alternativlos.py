@@ -36,11 +36,7 @@ def parse_input_arguments():
 		dest = 'output',
 		help = 'Podcasts dump folder',
 		default = '.')
-
 	args = argp.parse_args()
-	
-	print('Checking if new Alternativlos podcasts are available ...')
-
 	return args
 
 
@@ -61,14 +57,21 @@ def main():
 	
 	xmldoc = parseString(html)
 	itemlist = xmldoc.getElementsByTagName('enclosure')
+	has_new_podcasts = False;
 
+	print('Checking if new Alternativlos podcasts are available ... ', end='')
+	
 	for s in itemlist:
 		destination_name = urlparse(s.attributes['url'].value)
 		destination_name = os.path.join(args.output, os.path.basename(destination_name.path))
 		destination_path = Path(destination_name) 
-		print('Downloading', s.attributes['url'].value, '... ', end='')
 
 		if not destination_path.exists():
+			if not has_new_podcasts:
+				print('ok.')
+				has_new_podcasts = True
+				
+			print('Downloading', s.attributes['url'].value, '... ', end='')
 			try:
 				ul.urlretrieve(s.attributes['url'].value, destination_name)
 				print('ok')
@@ -79,8 +82,9 @@ def main():
 				if fh:
 					fh.write(errMsg + '\n')
 					fh.close()
-		else:
-			print('already exists')
 
+	if not has_new_podcasts:
+		print('nothing new.')
+		
 if __name__ == '__main__':
 	main()
