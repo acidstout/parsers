@@ -1,11 +1,15 @@
 <?php
 /**
- * WRINT parser
+ * WordPress podcast parser
  * 
- * Parse posts for podcasts and create a clickable list of links.
+ * Parse posts by slug and create a clickable list of links.
  * 
  * @author nrekow
  */
+
+define('SOURCE_URL', 'https://wrint.de');
+define('SLUG', 'podcast');
+define('POSTS_PER_PAGE', 100);
 
 
 /**
@@ -15,9 +19,15 @@
  * @return integer|boolean
  */
 function getCategoryIdBySlug($slug = '') {
+	$url = SOURCE_URL;
+	$length = strlen($url) - 1;
+	if (strpos($url, '/') === $length) {
+		$url = substr($url, 0, $length);
+	}
+	
 	if (!empty($slug)) {
 		try {
-			$json = @file_get_contents('https://wrint.de/wp-json/wp/v2/categories/?slug=' . $slug);
+			$json = @file_get_contents($url . '/wp-json/wp/v2/categories/?slug=' . $slug);
 		
 			if ($json !== false && !empty($json)) {
 				$obj = json_decode($json); // Returns an object, not an array.
@@ -43,15 +53,25 @@ function getCategoryIdBySlug($slug = '') {
  * @param number $cat_id
  * @return array|boolean
  */
-function getPostsByCategoryId($cat_id = 0) {
+function getPostsByCategoryId($cat_id = 0, $posts_per_page = 100) {
 	$links = array();
 	$json = '';
 	$page = 1;
+
+	$url = SOURCE_URL;
+	$length = strlen($url) - 1;
+	if (strpos($url, '/') === $length) {
+		$url = substr($url, 0, $length);
+	}
+	
+	if (defined('POSTS_PER_PAGE') && $posts_per_page != POSTS_PER_PAGE) {
+		$posts_per_page = POSTS_PER_PAGE;
+	}
 	
 	if (is_numeric($cat_id)) {
 		do {
 			try {
-				$json = @file_get_contents('https://wrint.de/wp-json/wp/v2/posts?categories=' . $cat_id . '&per_page=100&page=' . $page);
+				$json = @file_get_contents($url . '/wp-json/wp/v2/posts?categories=' . $cat_id . '&per_page=' . $posts_per_page . '&page=' . $page);
 
 				if ($json !== false && !empty($json)) {
 					$arr = json_decode($json, true); // Returns an array this time.
@@ -107,7 +127,7 @@ function parsePost($post) {
 
 
 function generateClickableLinks($links) {
-	$output = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>WRINT podcast parser</title><style>body { font-family: sans-serif; } li a {font-family: monospace; }</style></head><body><h1>All WRINT podcasts</h1><p>Sorted descending (e.g. recent one at the top).</p><ul>';
+	$output = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>WordPress podcast parser</title><style>body { font-family: sans-serif; } li a {font-family: monospace; }</style></head><body><h1>All podcasts of ' . SOURCE_URL . '</h1><p>Sorted descending (e.g. recent one at the top).</p><ul>';
 	
 	foreach ($links as $link) {
 		$output .= '<li><a href="' . $link . '">' . $link . '</a></li>';
@@ -118,12 +138,14 @@ function generateClickableLinks($links) {
 	return $output;
 }
 
-// Get category id by slug (e.g. podcast).
-$cat_id = getCategoryIdBySlug('podcast');
 
+if (defined('SOURCE_URL') && !empty(SOURCE_URL)) {
+	// Get category id by slug (e.g. podcast).
+	$cat_id = getCategoryIdBySlug(SLUG);
 
-// Get all posts with a given category id, parse their content and extract the links to the podcasts.  
-$links = getPostsByCategoryId($cat_id);
+	// Get all posts with a given category id, parse their content and extract the links to the podcasts.  
+	$links = getPostsByCategoryId($cat_id);
 
-// Quick and dirty generate clickable links to each podcast file and show them.
-echo generateClickableLinks($links);
+	// Quick and dirty generate clickable links to each podcast file and show them.
+	echo generateClickableLinks($links);
+}
