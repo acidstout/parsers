@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 # ---------------------------------------------------------------------------
 #
-# c't Uplink RSS video feed parser
+# RSS feed parser
 # Version 0.2.1
 # @author: nrekow
 #
-# Parses the HD video RSS feed and creates a Bash/Batch script with wget
-# entries for each video. Videos will be stored using the respective title
-# as found in the parsed RSS feed.
+# Parses an RSS feed and creates a Bash/Batch script with wget
+# entries to download stuff.
 #
+# Requires lxml module to be installed (e.g. "pip install lxml").
 #
 # ---------------------------------------------------------------------------
 
@@ -40,7 +40,7 @@ except ImportError:
 # for backwards compatibility
 
 def parse_input_arguments():
-	argp = argparse.ArgumentParser(description = 'c\'t Uplink Parser. Script to download videos.')
+	argp = argparse.ArgumentParser(description = 'RSS feed parser. Script to download stuff.')
 	argp.add_argument('-q', '--quiet', action = 'store_true',
 		dest = 'quiet',
 		help = 'enable wget quiet mode')
@@ -53,18 +53,18 @@ def parse_input_arguments():
 	return args
 
 def main():
-	# The URL of the c't Uplink RSS video feed
-	url = 'https://www.heise.de/ct/uplink/ctuplinkvideohd.rss'
+	# The URL of the RSS feed
+	url = 'http://nauticradio.beatsnbreaks.nl/podcast/technomania'
 
 	# Fetch RSS feed
 	try:
 		# Parse command line parameters
 		args = parse_input_arguments()
-		
+
 		# Fetch RSS feed
 		html = ul.urlopen(url).read()
 		content = etree.fromstring(html)
-		
+
 		# Check OS and decide what type of file to create
 		if platform.system() == 'Windows':
 			script_ext = '.cmd'
@@ -100,36 +100,22 @@ def main():
 			for item in content.xpath('/rss/channel/item'):
 				link = item.xpath("./guid/text()")[0]				# Get link to video file.
 				
-				if "https:" not in link:
-					link = item.xpath("./enclosure/@url")[0]
-				
 				# If the current URL does not exist in the destination file add it.
 				if link not in open(filename).read():
 					title = item.xpath("./title/text()")[0]			# Get title of video.
 				
 					# Cleanup title, because we'll use it as filename.
 					# Keep these characters and replace everything else but a-zA-Z0-9.
-					keepcharacters = (' ', '.', ',', '-', '_', '&', '\'', u'Ä', u'Ö', u'Ü', u'ä', u'ö', u'ü', u'ß')
+					keepcharacters = (' ','.',',','-','_','&','\'',u'ä',u'ö',u'ü',u'Ä',u'Ö',u'Ü',u'ß')
 					title = "".join([c for c in title if re.match(r'\w', c) or c in keepcharacters])
-					title = title.replace('c\'t uplink ', '')		# Also remove the "c't uplink" ...
-					title = title.replace('c\’t uplink ', '')		# Also remove the "c't uplink" ...
-					title = title.replace('ct uplink ', '')			# ... and "ct uplink" ...
-					title = title.replace('c\'t Episode ', '')		# ... and "c't Episode" from the title.
 					title = title.replace(' - ', ' ')				# Replace separating dashes with a single space.
 					title = title.replace('  ', ' ')				# Replace duplicate whitespaces with a single space.
-					
-					if title.startswith('-'):						# Remove leading dash.
-						title = title[1:]
-					
-					if title.startswith('nk '):						# Fix wrong/incomplete title (e.g. "nk" instead of "Uplink").
-						title = title[3:]
-					
 					title = title.strip()							# Remove leading and trailing whitespaces.
 					#description = item.xpath("./description/text()")[0]	# Get description of video. Just for reference.
 	
 					# Get file extension from link. Better use mime-type instead.
 					ext = os.path.splitext(link)[1]
-					
+
 					try:
 						# Generate a bash/batch file which contains one wget entry per link.
 						message = u'wget --continue --referer="' + url + '" ' + quiet + '--output-document="' + title + ext + '" ' + link + '\n'
