@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 #
 # Cyanide & Happiness Parser
-# Version 0.3.1
+# Version 0.3.2
 # @author: nrekow
 #
 # Allows to specify start and end id of comic strips as well as download folder.
@@ -38,7 +38,14 @@ try:
 	from urllib.error import URLError
 	import urllib.request as ul
 except ImportError:
-	print('This script requires the urllib2 module to be installed.')
+	print('This script requires the urllib module to be installed.')
+	sys.exit(0)
+
+# For actually downloading the comic-strip. urllib fails with HTTP error 505 since about 2018-06-19.
+try:
+	import requests
+except ImportError:
+	print('This script requires the requests module to be installed.')
 	sys.exit(0)
 
 
@@ -91,13 +98,24 @@ def parse_input_arguments():
 	if int(args.end_image) == 0:
 		args.end_image = get_latest_comic_id()
 		if int(args.end_image) == 0:
-			args.end_image = '5000' # Fallback to 5000. In the future this will not be enough. Maybe increase or optimize.
+			# args.end_image = '5000' # Fallback to 5000. In the future this will not be enough. Maybe increase or optimize.
+			print('Could not find latest comic id. Aborted.')
+			sys.exit(1)
 		
 	print('Latest comic id:', args.end_image)
 	# Only check for today's comic strip? Then use now as start and end date.
 	print('Checking if new Cyanide & Happiness content is available ...')
 
 	return args
+
+def update_data_file(script_path, comic_date):
+	try:
+		fh = open(os.path.join(script_path, 'cnh.dat'), 'a')
+		if fh:
+			fh.write(comic_date + '\n')
+			fh.close()
+	except:
+		print('Cannot create/write to data file!')
 
 
 def download_strips(script_path, start_image, end_image):
@@ -160,20 +178,21 @@ def download_strips(script_path, start_image, end_image):
 				if comic_url != '':
 					# comic_url = comic_url.replace(' ', '%20')
 					print(' from', comic_url, '... ', end='')
-					ul.urlretrieve(comic_url, comic_name)
+					
+					# Use "response" instead of "urllib", because the latter fails with HTTP error 505, when trying to download a comic-strip.
+					#ul.urlretrieve(comic_url, comic_name)
+					response = requests.get(comic_url, timeout=60, verify=False)
+					f = open(comic_name, 'wb')
+					f.write(response.content)
+					f.close()
+					
 					# Sleep a little to avoid hammering the server.
 					time.sleep(0.01)
 					print('ok!')
 					download_ok = True
 				else:
 					print(' not found!')
-					try:
-						fh = open(os.path.join(script_path, 'cnh.dat'), 'a')
-						if fh:
-							fh.write(comic_date + '\n')
-							fh.close()
-					except:
-						print('Cannot create data file!')
+					update_data_file(script_path, comic_date)
 			except URLError as e:
 				errMsg = ' failed with error ' + str(e.code) + ' while trying to download ' + url
 				fh = open(os.path.join(script_path, 'cnh.log'), 'a')
@@ -182,22 +201,28 @@ def download_strips(script_path, start_image, end_image):
 					fh.close()
 				
 				print(errMsg)
-				print('Will try again after 10 seconds ... ', end='')
-
-				time.sleep(10.0)
 				
 				if e.code != 404:
+					print('Will try again after 10 seconds ... ', end='')
+					time.sleep(10.0)
+
 					try:
 						comic_url = get_true_comic_url(url)
 						if comic_url != '':
 							# comic_url = comic_url.replace(' ', '%20')
-							ul.urlretrieve(comic_url, comic_name)
+							#ul.urlretrieve(comic_url, comic_name)
+							response = requests.get(comic_url, timeout=60, verify=False)
+							f = open(comic_name, 'wb')
+							f.write(response.content)
+							f.close()
+
 							# Sleep a little to avoid hammering the server.
 							time.sleep(0.01)
 							print('ok!')
 							download_ok = True
 						else:
 							print('not found!')
+							update_data_file(script_path, comic_date)
 					except URLError as e:
 						errMsg = 'failed with error ' + str(e.code) 
 						fh = open(os.path.join(script_path, 'cnh.log'), 'a')
@@ -207,7 +232,9 @@ def download_strips(script_path, start_image, end_image):
 
 						print(errMsg, end='')
 						print('. Skipping.')
-				
+				else:
+					update_data_file(script_path, comic_date)
+					
 			if download_ok:
 				# nrekow, 2017-02-02: Check image type and set proper file extension.
 				extension = imghdr.what(comic_name)
