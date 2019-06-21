@@ -3,11 +3,10 @@
 # ---------------------------------------------------------------------------
 #
 # RSS feed parser
-# Version 0.2.1
+# Version 0.2.2
 # @author: nrekow
 #
-# Parses an RSS feed and creates a Bash/Batch script with wget
-# entries to download stuff.
+# Parses an RSS feed and downloads stuff.
 #
 # Requires lxml module to be installed (e.g. "pip install lxml").
 #
@@ -41,9 +40,13 @@ except ImportError:
 
 def parse_input_arguments():
 	argp = argparse.ArgumentParser(description = 'RSS feed parser. Script to download stuff.')
+	argp.add_argument('-d', '--destination',
+		dest = 'destination',
+		help = 'set optional destination',
+		default = '')
 	argp.add_argument('-q', '--quiet', action = 'store_true',
 		dest = 'quiet',
-		help = 'enable wget quiet mode')
+		help = 'enable quiet mode')
 	argp.add_argument('-o', '--overwrite', action = 'store_true',
 		dest = 'overwrite',
 		help = 'overwrite destination file')
@@ -55,76 +58,60 @@ def parse_input_arguments():
 def main():
 	# The URL of the RSS feed
 	url = 'http://nauticradio.beatsnbreaks.nl/podcast/technomania'
+	dest = 'D:\Downloads\_my\Music\\'
 
 	# Fetch RSS feed
 	try:
 		# Parse command line parameters
 		args = parse_input_arguments()
+		
+		# Check if a destination has been provided ...
+		if (args.destination):
+			dest = args.destination
+		
+		# Make sure there's no trailing (back)slash ...
+		dest = dest.rstrip(os.sep)
+		
+		# ... in order to add a trailing (back)slash to have a proper path.
+		dest = dest + os.sep
+		
+		# ... and create it if it doesn't exist.
+		try:
+			if dest != '.' and not(os.path.isdir(dest)):
+				os.makedirs(dest)
+		except OSError:
+			dest = '.'
 
 		# Fetch RSS feed
 		html = ul.urlopen(url).read()
 		content = etree.fromstring(html)
 
-		# Check OS and decide what type of file to create
-		if platform.system() == 'Windows':
-			script_ext = '.cmd'
-			script_first = '@echo off\n'
-		else:
-			script_ext = '.sh'
-			script_first = '#!/bin/bash\n'
-	
-		filename = 'download' + script_ext
+		# Parse RSS feed
+		for item in content.xpath('/rss/channel/item'):
+			link = item.xpath("./guid/text()")[0]			# Get link to video file.
+			title = item.xpath("./title/text()")[0]			# Get title of video.
 		
-		# Flag to decide whether wget is quiet or not. Defaults to not quiet.
-		if args.quiet:
-			quiet = '--quiet ' # Mind the trailing space.
-		else:
-			quiet = ''
-			
-		# Set write mode depending on file existence or parameter
-		if args.overwrite:
-			mode = 'w'	# Overwrite
-		else:
-			if os.path.exists(filename):
-				mode = 'a'	# Append
-			else:
-				mode = 'w'	# Create
-		
-		fh = codecs.open(filename, mode, "utf-8")
-		if fh:
-			# Add predefined first line to script
-			if mode == 'w':
-				fh.write(script_first)
-			
-			# Parse RSS feed
-			for item in content.xpath('/rss/channel/item'):
-				link = item.xpath("./guid/text()")[0]				# Get link to video file.
-				
-				# If the current URL does not exist in the destination file add it.
-				if link not in open(filename).read():
-					title = item.xpath("./title/text()")[0]			# Get title of video.
-				
-					# Cleanup title, because we'll use it as filename.
-					# Keep these characters and replace everything else but a-zA-Z0-9.
-					keepcharacters = (' ','.',',','-','_','&','\'',u'ä',u'ö',u'ü',u'Ä',u'Ö',u'Ü',u'ß')
-					title = "".join([c for c in title if re.match(r'\w', c) or c in keepcharacters])
-					title = title.replace(' - ', ' ')				# Replace separating dashes with a single space.
-					title = title.replace('  ', ' ')				# Replace duplicate whitespaces with a single space.
-					title = title.strip()							# Remove leading and trailing whitespaces.
-					#description = item.xpath("./description/text()")[0]	# Get description of video. Just for reference.
-	
-					# Get file extension from link. Better use mime-type instead.
-					ext = os.path.splitext(link)[1]
+			# Cleanup title, because we'll use it as filename.
+			# Keep these characters and replace everything else but a-zA-Z0-9.
+			keepcharacters = (' ','.',',','-','_','&','\'',u'ä',u'ö',u'ü',u'Ä',u'Ö',u'Ü',u'ß')
+			title = "".join([c for c in title if re.match(r'\w', c) or c in keepcharacters])
+			title = title.replace(' - ', ' ')				# Replace separating dashes with a single space.
+			title = title.replace('  ', ' ')				# Replace duplicate whitespaces with a single space.
+			title = title.strip()							# Remove leading and trailing whitespaces.
+			#description = item.xpath("./description/text()")[0]	# Get description of video. Just for reference.
 
-					try:
-						# Generate a bash/batch file which contains one wget entry per link.
-						message = u'wget --continue --referer="' + url + '" ' + quiet + '--output-document="' + title + ext + '" ' + link + '\n'
-						fh.write(message)
-					except:
-						print('Cannot write to file!')
-			fh.close()
-		else:
-			print('Cannot open file for writing!')
+			# Get file extension from link. Better use mime-type instead.
+			ext = os.path.splitext(link)[1]
+			fn = dest + title + ext
+			
+			# If the destination file does not exist and no overwrite flag was set, start download.
+			if os.path.exists(fn) and not args.overwrite:
+				if not args.quiet:
+					print(dest + title + ext + ' already exists. Skipped.')
+			else:
+				if not args.quiet:
+					print('Downloading ' + dest + title + ext + ' ...')
+				ul.urlretrieve(link, fn)
 	except URLError as e:
 		print('failed with error', e.code, 'while trying to download ', url)
 		sys.exit(0)

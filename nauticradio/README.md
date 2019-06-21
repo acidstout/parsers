@@ -1,3 +1,3 @@
 About
 =====
-This script parses an RSS feed and generates a list of wget commands, which download each media entry and store it using the title of the episode as filename, rather the original cryptic filename. It also creates a log file if requested for each downloaded file. I didn't put much effort into this, so don't expect anything fancy. I just wanted to have a script generate me a list of wget commands, in order not to have to bother around with cryptic filenames anymore.
+This script parses an RSS feed and downloads each media entry and store it using the title of the episode as filename, rather the original cryptic filename. I didn't put much effort into this, so don't expect anything fancy.
