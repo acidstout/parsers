@@ -1,4 +1,11 @@
 #!/bin/bash
+#
+# Continuous background downloader.
+# Use "kill <pid>" to end the process.
+#
+# @author nrekow 
+#
+
 DEST="./articles"
 SRCLIST="articles.txt"
 

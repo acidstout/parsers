@@ -10,6 +10,7 @@
 define('SOURCE_URL', 'https://wrint.de');
 define('SLUG', 'podcast');
 define('POSTS_PER_PAGE', 100);
+define('OUTPUT_FILE', 'articles.txt');
 
 
 /**
@@ -146,6 +147,11 @@ if (defined('SOURCE_URL') && !empty(SOURCE_URL)) {
 	// Get all posts with a given category id, parse their content and extract the links to the podcasts.  
 	$links = getPostsByCategoryId($cat_id);
 
-	// Quick and dirty generate clickable links to each podcast file and show them.
-	echo generateClickableLinks($links);
+	if (defined('OUTPUT_FILE') && !empty(OUTPUT_FILE)) {
+		// Write links to file.
+		file_put_contents(OUTPUT_FILE, implode("\n", $links));
+	} else {
+		// Quick and dirty generate clickable links to each podcast file and show them.
+		echo generateClickableLinks($links);
+	}
 }
