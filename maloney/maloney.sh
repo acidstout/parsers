@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Maloney Episodes Downloader
-# Version 1.2.2 Beta
+# Version 1.2.3
 #
 # Desription
 #	Download latest episodes of SRF's "Die haarstäubenden Fälle des Philip Maloney"
@@ -21,6 +21,9 @@
 #	./maloney.sh [destination]
 #
 #
+
+# Set user-agent for use with cURL.
+useragent="Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:74.0) Gecko/20100101 Firefox/74.0"
 
 # Set this to false to generate an XML items list instead of downloading episodes.
 download_flag="true"
@@ -104,7 +107,7 @@ num_episodes_shown="false"
 # Main loop.
 # while [ $has_episodes == "true" ]; do
 	index_url="https://www.srf.ch/sendungen/maloney/layout/set/ajax/Sendungen/maloney/sendungen/(offset)/$offset"
-	index=$(curl --silent --compressed "$index_url")
+	index=$(curl --user-agent "$useragent" --silent --compressed "$index_url")
 
 	# Quirks to tell xmllint the input charset.
 	index=$(echo $index | sed -e 's/<head>/<head><meta charset="UTF-8">/')
@@ -144,6 +147,10 @@ num_episodes_shown="false"
 			has_episodes="false"
 			break
 		fi
+		
+		# Get only the element after the last colon.
+		urn=${urn##*:}
+		#echo $urn
 
 		# Trims the title.
 		title=$(echo -n $title | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
@@ -154,21 +161,36 @@ num_episodes_shown="false"
 			>&2 echo " found."
 			>&2 echo -n "Processing \"$title\" ... "
 			# Retrieves the audio download link (the https one).
-			audio_source=$(curl --silent --compressed \
+			audio_source=$(curl --user-agent "$useragent" --silent --compressed \
 				"https://il.srgssr.ch/integrationlayer/1.0/ue/srf/audio/play/$urn" | \
 				grep -Po "https.*\.mp3" | \
 				head -n1)
 
-			# Fetches the audio filesize.
-			filesize_B=$(curl --silent --head "$audio_source" | awk '/Content-Length/ { print substr($2, 1, length($2)-1) }')
-
-			if [ "$download_flag" = "true" ]; then
-				>&2 echo -n "downloading ... "
-				item=$(download_item "$title" "$audio_source" "$filesize_B" "$pub_date" "$description")
-				>&2 echo "ok."
+			if [ "$audio_source" == "" ]; then
+				echo "failed."
+				echo "Trying different method to get audio URL for $urn ..."
+				if [ -f maloney_streams ]; then
+					rm maloney_streams.txt
+				fi
+				
+				curl --user-agent "$useragent" --silent --compressed -o "maloney_streams.txt" "https://il.srgssr.ch/integrationlayer/1.0/ue/srf/audio/play/$urn"
+				audio_source=$(cat maloney_streams.txt | grep -Po "https.*\.mp3" | head -n1)
+			fi
+			
+			if [ "$audio_source" == "" ]; then
+				echo "Failed using alternative method. Giving up."
 			else
-				>&2 echo "added to feed."
-				item=$(print_item "$title" "$audio_source" "$filesize_B" "$pub_date" "$description")
+				# Fetches the audio filesize.
+				filesize_B=$(curl --user-agent "$useragent" --silent --head "$audio_source" | awk '/Content-Length/ { print substr($2, 1, length($2)-1) }')
+
+				if [ "$download_flag" == "true" ]; then
+					>&2 echo -n "downloading ... "
+					item=$(download_item "$title" "$audio_source" "$filesize_B" "$pub_date" "$description")
+					>&2 echo "ok."
+				else
+					>&2 echo "added to feed."
+					item=$(print_item "$title" "$audio_source" "$filesize_B" "$pub_date" "$description")
+				fi
 			fi
 
 			>&2 echo -n "Checking for another episode ..."
