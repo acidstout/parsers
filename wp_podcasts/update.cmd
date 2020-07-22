@@ -1,5 +1,5 @@
 @echo off
 setlocal
-echo Updating link list ...
+echo Parsing website ...
 php -f parser.php
 endlocal
