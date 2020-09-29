@@ -113,7 +113,7 @@ def main():
 			else:
 				if not args.quiet:
 					# print('Downloading ' + dest + title + ext + ' ...')
-					print('Downloading ', link, ' ... ', end='')
+					print('Downloading', link, '... ', end='')
 				
 				ul.urlretrieve(link, fn)
 				

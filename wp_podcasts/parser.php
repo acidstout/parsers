@@ -3,14 +3,26 @@
  * WordPress podcast parser
  * 
  * Parse posts by slug and create a clickable list of links.
+ * Alternatively dump all respective posts.
+ * 
+ * Usage:
+ * 
+ *      php -f parser.php
  * 
  * @author nrekow
  */
 
-define('SOURCE_URL', 'https://wrint.de');
-define('SLUG', 'podcast');
-define('POSTS_PER_PAGE', 100);
+// WRINT
+//define('SOURCE_URL', 'https://wrint.de');
+//define('SLUG', 'podcast');
 
+// SlateStarCodex
+define('SOURCE_URL', 'https://slatestarcodex.com');
+define('SLUG', 'uncategorized');
+
+define('POSTS_PER_PAGE', 100);
+define('OUTPUT_FILE', 'articles.txt');
+define('DUMP_POSTS', true);
 
 /**
  * Get category id by slug from a WordPress blog using its REST API v2.
@@ -77,10 +89,14 @@ function getPostsByCategoryId($cat_id = 0, $posts_per_page = 100) {
 					$arr = json_decode($json, true); // Returns an array this time.
 					
 					foreach ($arr as $items) {
-						if (isset($items['content']) && isset($items['content']['rendered']) && !empty($items['content']['rendered'])) {
-							$tmp = parsePost($items['content']['rendered']);
-							if ($tmp) {
-								$links[] = $tmp;
+						if (defined('DUMP_POSTS') && DUMP_POSTS !== false) {
+							dumpPost($items);
+						} else {
+							if (isset($items['content']) && isset($items['content']['rendered']) && !empty($items['content']['rendered'])) {
+								$tmp = parsePost($items['content']['rendered']);
+								if ($tmp) {
+									$links[] = $tmp;
+								}
 							}
 						}
 					}
@@ -126,6 +142,28 @@ function parsePost($post) {
 }
 
 
+/**
+ * Dump a WordPress post into a local HTML file.
+ * Uses the post's slug as filename.
+ * 
+ * @param array $items
+ */
+function dumpPost($items) {
+	$filename = $items['slug'] . '.html';
+	$title = $items['title']['rendered'];
+	$content = $items['content']['rendered'];
+	
+	$body = '<!doctype html><html><head><meta charset="utf-8"/><title>' . $title . '</title></head><body>' . $content . '</body></html>';
+	file_put_contents($filename, $body);
+}
+
+
+/**
+ * Generates an HTML file with links to collected posts.
+ * 
+ * @param array $links
+ * @return string
+ */
 function generateClickableLinks($links) {
 	$output = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>WordPress podcast parser</title><style>body { font-family: sans-serif; } li a {font-family: monospace; }</style></head><body><h1>All podcasts of ' . SOURCE_URL . '</h1><p>Sorted descending (e.g. recent one at the top).</p><ul>';
 	
@@ -146,6 +184,13 @@ if (defined('SOURCE_URL') && !empty(SOURCE_URL)) {
 	// Get all posts with a given category id, parse their content and extract the links to the podcasts.  
 	$links = getPostsByCategoryId($cat_id);
 
-	// Quick and dirty generate clickable links to each podcast file and show them.
-	echo generateClickableLinks($links);
+	if (!defined('DUMP_POSTS') || DUMP_POSTS !== true) {
+		if (defined('OUTPUT_FILE') && !empty(OUTPUT_FILE)) {
+			// Write links to file.
+			file_put_contents(OUTPUT_FILE, implode("\n", $links));
+		} else {
+			// Quick and dirty generate clickable links to each podcast file and show them.
+			echo generateClickableLinks($links);
+		}
+	}
 }
