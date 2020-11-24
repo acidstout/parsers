@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 #
 # Cyanide & Happiness Parser
-# Version 0.3.2
+# Version 0.3.3
 # @author: nrekow
 #
 # Allows to specify start and end id of comic strips as well as download folder.
@@ -37,6 +37,8 @@ except ImportError:
 try:
 	from urllib.error import URLError
 	import urllib.request as ul
+	import urllib3
+	urllib3.disable_warnings()
 except ImportError:
 	print('This script requires the urllib module to be installed.')
 	sys.exit(0)
@@ -159,7 +161,7 @@ def download_strips(script_path, start_image, end_image):
 	if missing_comics:
 		for comic_date in missing_comics:
 			# Build URL to comic strip page
-			url  = 'http://explosm.net/comics/' + comic_date
+			url  = 'https://explosm.net/comics/' + comic_date
 			
 			# Save the file as tmp-file, because we don't know the image type, yet.
 			comic_name = comic_date + '.tmp'
@@ -250,7 +252,7 @@ def download_strips(script_path, start_image, end_image):
 
 def get_true_comic_url(comic_url, comic_name='comic'):
 	"""
-	Get the true comic strip url from http://dilbert.com/strip/<date>
+	Get the true comic strip url from https://explosm.net/comics/<id>
 
 	It looks like Scott Adams has protected himself against pointy haired
 	pirates by hiding his comic strips within the assets.amuniversal domain.
@@ -259,22 +261,23 @@ def get_true_comic_url(comic_url, comic_name='comic'):
 	"""
 
 	html = str(ul.urlopen(comic_url).read())
-	comic_strip_pattern = 'http:\/\/files\.explosm\.net\/comics\/[a-zA-Z\d\.\(\)\-\/_\,\!\@\s\%]+'
+	# nrekow, 2020-11-24: The site now uses URLs without protocols, so I updated the RegEx pattern.
+	comic_strip_pattern = '\/\/files\.explosm\.net\/comics\/[a-zA-Z\d\.\(\)\-\/_\,\!\@\s\%\?\=]+'
 	result = re.search(comic_strip_pattern, html)
 	if result:
-		return result.group()
+		return 'https:' + result.group()
 	else:
 		return ''
 
 
 def get_latest_comic_id():
 	"""
-	Get the id of the latest comic strip from http://explosm.net/comics/latest
+	Get the id of the latest comic strip from https://explosm.net/comics/latest
 	
 	Checks HTML head for content of meta property tag and cleans up result.
 	"""
-	html = str(ul.urlopen('http://explosm.net/comics/latest').read())
-	comic_id_pattern = '<meta property="og:url" content="http:\/\/explosm\.net\/comics\/[0-9]+\/">'
+	html = str(ul.urlopen('https://explosm.net/comics/latest').read())
+	comic_id_pattern = '<meta property="og:url" content="https:\/\/explosm\.net\/comics\/[0-9]+\/">'
 	result = re.search(comic_id_pattern, html)
 	if result:
 		result = result.group()
